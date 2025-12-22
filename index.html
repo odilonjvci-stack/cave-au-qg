@@ -1,0 +1,244 @@
+index.html
+manifest.json
+sw.js
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Cave Au QG</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#111">
+
+<style>
+body{margin:0;font-family:Arial;background:#1e1e1e;color:#fff}
+header{background:#111;padding:15px;text-align:center;font-size:22px;font-weight:bold}
+.container{padding:15px}
+.hidden{display:none}
+.btn{width:100%;padding:15px;margin:10px 0;font-size:18px;border:none;border-radius:8px;background:#2c3e50;color:#fff}
+.card{background:#2a2a2a;padding:15px;border-radius:8px;margin-bottom:15px}
+input,select{width:100%;padding:10px;margin:5px 0;border-radius:5px;border:none}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px;border-bottom:1px solid #444;text-align:center}
+.alert{color:#ff7675;font-weight:bold}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="container">
+<header>🔒 Cave « Au QG »</header>
+<div class="card">
+<select id="role">
+<option value="vendeur">Vendeur</option>
+<option value="admin">Admin</option>
+</select>
+<input id="pin" type="password" placeholder="Code PIN">
+<button class="btn" onclick="loginCheck()">Connexion</button>
+</div>
+</div>
+
+<header id="mainHeader" class="hidden">🍾 Cave « Au QG »</header>
+
+<!-- HOME -->
+<div id="home" class="container hidden">
+<button class="btn" onclick="show('stock')">📦 Stock</button>
+<button class="btn" onclick="show('ventes')">💰 Ventes</button>
+<button class="btn" onclick="show('recettes')">📊 Recettes</button>
+<div class="card">
+<p>Stock total : <b id="stockTotal">0</b></p>
+<p>Recette du jour : <b id="recetteJour">0</b> FCFA</p>
+</div>
+</div>
+
+<!-- STOCK -->
+<div id="stock" class="container hidden">
+<button class="btn" onclick="show('home')">⬅ Retour</button>
+<div class="card">
+<input id="s_nom" placeholder="Nom boisson">
+<select id="s_cat">
+<option>Bière</option><option>Vin</option>
+<option>Whisky</option><option>Jus</option><option>Autres</option>
+</select>
+<input id="s_achat" type="number" placeholder="Prix achat">
+<input id="s_vente" type="number" placeholder="Prix vente">
+<input id="s_qte" type="number" placeholder="Quantité">
+<button class="btn" onclick="addBoisson()">Ajouter</button>
+</div>
+
+<div class="card">
+<table>
+<thead>
+<tr><th>Nom</th><th>Stock</th><th>Alerte</th><th>❌</th></tr>
+</thead>
+<tbody id="stockList"></tbody>
+</table>
+</div>
+</div>
+
+<!-- VENTES -->
+<div id="ventes" class="container hidden">
+<button class="btn" onclick="show('home')">⬅ Retour</button>
+<div class="card">
+<select id="v_boisson"></select>
+<input id="v_qte" type="number" placeholder="Quantité">
+<button class="btn" onclick="sell()">Valider vente</button>
+</div>
+
+<div class="card">
+<table>
+<thead>
+<tr><th>Boisson</th><th>Qté</th><th>Total</th><th>Date</th><th>❌</th></tr>
+</thead>
+<tbody id="venteList"></tbody>
+</table>
+</div>
+</div>
+
+<!-- RECETTES -->
+<div id="recettes" class="container hidden">
+<button class="btn" onclick="show('home')">⬅ Retour</button>
+<div class="card">
+<p>Jour : <b id="rJour">0</b> FCFA</p>
+<p>Mois : <b id="rMois">0</b> FCFA</p>
+<p>Bénéfice : <b id="benef">0</b> FCFA</p>
+<button class="btn" onclick="window.print()">📄 Export PDF</button>
+</div>
+</div>
+
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "👉COLLE_TA_API_KEY",
+  authDomain: "👉TON_PROJET.firebaseapp.com",
+  databaseURL: "👉https://TON_PROJET-default-rtdb.firebaseio.com",
+  projectId: "👉TON_PROJET",
+  storageBucket: "👉TON_PROJET.appspot.com",
+  messagingSenderId: "👉XXXX",
+  appId: "👉XXXX"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+</script>
+
+<script>
+const PIN_ADMIN='9999';
+const PIN_VENDEUR='1234';
+let roleActuel=null;
+
+let boissons=[];
+let ventes=[];
+
+db.ref("boissons").on("value", s=>{
+  boissons=s.val()||[];
+  refresh();
+});
+
+db.ref("ventes").on("value", s=>{
+  ventes=s.val()||[];
+  refresh();
+});
+
+function save(){
+  db.ref("boissons").set(boissons);
+  db.ref("ventes").set(ventes);
+}
+
+function loginCheck(){
+ const r=role.value,p=pin.value;
+ if((r==='admin'&&p===PIN_ADMIN)||(r==='vendeur'&&p===PIN_VENDEUR)){
+  roleActuel=r;
+  login.classList.add('hidden');
+  mainHeader.classList.remove('hidden');
+  show('home');
+  document.querySelector("button[onclick=\"show('stock')\"]").style.display=(r==='vendeur')?'none':'block';
+ } else alert('PIN incorrect');
+}
+
+function show(id){
+ document.querySelectorAll('.container').forEach(c=>c.classList.add('hidden'));
+ document.getElementById(id).classList.remove('hidden');
+ refresh();
+}
+
+function addBoisson(){
+ boissons.push({
+  nom:s_nom.value,
+  cat:s_cat.value,
+  achat:+s_achat.value,
+  vente:+s_vente.value,
+  stock:+s_qte.value
+ });
+ save();
+}
+
+function sell(){
+ const i=v_boisson.value,q=+v_qte.value;
+ if(boissons[i].stock<q) return alert('Stock insuffisant');
+ boissons[i].stock-=q;
+ ventes.push({
+  nom:boissons[i].nom,
+  qte:q,
+  total:q*boissons[i].vente,
+  benef:(boissons[i].vente-boissons[i].achat)*q,
+  date:new Date().toISOString()
+ });
+ save();
+}
+
+function refresh(){
+ stockList.innerHTML='';
+ v_boisson.innerHTML='';
+ venteList.innerHTML='';
+ let st=0,j=0,m=0,b=0;
+ const d=new Date();
+
+ boissons.forEach((x,i)=>{
+  st+=x.stock;
+  stockList.innerHTML+=`
+  <tr>
+   <td>${x.nom}</td>
+   <td>${x.stock}</td>
+   <td class="${x.stock<=5?'alert':''}">${x.stock<=5?'Faible':''}</td>
+   <td onclick="if(roleActuel==='admin'){boissons.splice(${i},1);save()}">❌</td>
+  </tr>`;
+  v_boisson.innerHTML+=`<option value="${i}">${x.nom}</option>`;
+ });
+
+ ventes.forEach((v,i)=>{
+  venteList.innerHTML+=`
+  <tr>
+   <td>${v.nom}</td>
+   <td>${v.qte}</td>
+   <td>${v.total}</td>
+   <td>${new Date(v.date).toLocaleString()}</td>
+   <td onclick="if(roleActuel==='admin'){ventes.splice(${i},1);save()}">❌</td>
+  </tr>`;
+  const vd=new Date(v.date);
+  if(vd.toDateString()==d.toDateString()) j+=v.total;
+  if(vd.getMonth()==d.getMonth()) m+=v.total;
+  b+=v.benef;
+ });
+
+ stockTotal.innerText=st;
+ recetteJour.innerText=j;
+ rJour.innerText=j;
+ rMois.innerText=m;
+ benef.innerText=b;
+}
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+ navigator.serviceWorker.register('sw.js');
+}
+</script>
+
+</body>
+</html>
