@@ -1,27 +1,105 @@
-index.html
-manifest.json
-sw.js
 <!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <title>Cave Au QG</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#111">
+<meta name="theme-color" content="#020617">
 
 <style>
-body{margin:0;font-family:Arial;background:#1e1e1e;color:#fff}
-header{background:#111;padding:15px;text-align:center;font-size:22px;font-weight:bold}
-.container{padding:15px}
+:root{
+ --bg:#020617;
+ --card:#0f172a;
+ --primary:#22c55e;
+ --secondary:#3b82f6;
+ --danger:#ef4444;
+ --text:#e5e7eb;
+ --muted:#94a3b8;
+}
+*{box-sizing:border-box}
+body{
+ margin:0;
+ font-family:'Segoe UI',Roboto,Arial;
+ background:linear-gradient(180deg,#020617,#020617);
+ color:var(--text);
+}
+header{
+ background:rgba(2,6,23,.9);
+ backdrop-filter:blur(10px);
+ padding:16px;
+ text-align:center;
+ font-size:22px;
+ font-weight:700;
+ position:sticky;
+ top:0;
+ z-index:10;
+}
+.container{padding:16px;animation:fade .35s}
+@keyframes fade{
+ from{opacity:0;transform:translateY(10px)}
+ to{opacity:1;transform:translateY(0)}
+}
+.card{
+ background:var(--card);
+ padding:16px;
+ border-radius:16px;
+ margin-bottom:16px;
+ box-shadow:0 10px 25px rgba(0,0,0,.4);
+}
+.btn{
+ width:100%;
+ padding:14px;
+ margin:8px 0;
+ font-size:17px;
+ font-weight:600;
+ border:none;
+ border-radius:14px;
+ background:linear-gradient(135deg,var(--secondary),var(--primary));
+ color:#fff;
+ cursor:pointer;
+ transition:.25s;
+}
+.btn:active{transform:scale(.97)}
+.logout{
+ width:calc(100% - 32px);
+ margin:12px 16px;
+ padding:12px;
+ border-radius:14px;
+ background:var(--danger);
+ color:#fff;
+ border:none;
+ font-weight:600;
+}
+input,select{
+ width:100%;
+ padding:12px;
+ margin:6px 0;
+ border-radius:12px;
+ border:none;
+ background:#020617;
+ color:var(--text);
+ outline:none;
+}
+table{
+ width:100%;
+ border-collapse:collapse;
+ font-size:14px;
+}
+th{color:var(--muted);padding:10px}
+td{
+ padding:10px;
+ border-bottom:1px solid #1e293b;
+ text-align:center;
+}
+.alert{color:var(--danger);font-weight:700}
 .hidden{display:none}
-.btn{width:100%;padding:15px;margin:10px 0;font-size:18px;border:none;border-radius:8px;background:#2c3e50;color:#fff}
-.card{background:#2a2a2a;padding:15px;border-radius:8px;margin-bottom:15px}
-input,select{width:100%;padding:10px;margin:5px 0;border-radius:5px;border:none}
-table{width:100%;border-collapse:collapse}
-th,td{padding:8px;border-bottom:1px solid #444;text-align:center}
-.alert{color:#ff7675;font-weight:bold}
+.stat{
+ display:flex;
+ justify-content:space-between;
+ font-size:16px;
+ padding:6px 0;
+}
 </style>
 </head>
 
@@ -41,6 +119,7 @@ th,td{padding:8px;border-bottom:1px solid #444;text-align:center}
 </div>
 
 <header id="mainHeader" class="hidden">🍾 Cave « Au QG »</header>
+<button id="logoutBtn" class="logout hidden" onclick="logout()">🚪 Déconnexion</button>
 
 <!-- HOME -->
 <div id="home" class="container hidden">
@@ -48,8 +127,8 @@ th,td{padding:8px;border-bottom:1px solid #444;text-align:center}
 <button class="btn" onclick="show('ventes')">💰 Ventes</button>
 <button class="btn" onclick="show('recettes')">📊 Recettes</button>
 <div class="card">
-<p>Stock total : <b id="stockTotal">0</b></p>
-<p>Recette du jour : <b id="recetteJour">0</b> FCFA</p>
+<div class="stat"><span>Stock total</span><b id="stockTotal">0</b></div>
+<div class="stat"><span>Recette du jour</span><b id="recetteJour">0 FCFA</b></div>
 </div>
 </div>
 
@@ -59,15 +138,14 @@ th,td{padding:8px;border-bottom:1px solid #444;text-align:center}
 <div class="card">
 <input id="s_nom" placeholder="Nom boisson">
 <select id="s_cat">
-<option>Bière</option><option>Vin</option>
-<option>Whisky</option><option>Jus</option><option>Autres</option>
+<option>Bière</option><option>Vin</option><option>Whisky</option>
+<option>Jus</option><option>Autres</option>
 </select>
 <input id="s_achat" type="number" placeholder="Prix achat">
 <input id="s_vente" type="number" placeholder="Prix vente">
 <input id="s_qte" type="number" placeholder="Quantité">
 <button class="btn" onclick="addBoisson()">Ajouter</button>
 </div>
-
 <div class="card">
 <table>
 <thead>
@@ -86,7 +164,6 @@ th,td{padding:8px;border-bottom:1px solid #444;text-align:center}
 <input id="v_qte" type="number" placeholder="Quantité">
 <button class="btn" onclick="sell()">Valider vente</button>
 </div>
-
 <div class="card">
 <table>
 <thead>
@@ -101,9 +178,9 @@ th,td{padding:8px;border-bottom:1px solid #444;text-align:center}
 <div id="recettes" class="container hidden">
 <button class="btn" onclick="show('home')">⬅ Retour</button>
 <div class="card">
-<p>Jour : <b id="rJour">0</b> FCFA</p>
-<p>Mois : <b id="rMois">0</b> FCFA</p>
-<p>Bénéfice : <b id="benef">0</b> FCFA</p>
+<div class="stat"><span>Jour</span><b id="rJour">0 FCFA</b></div>
+<div class="stat"><span>Mois</span><b id="rMois">0 FCFA</b></div>
+<div class="stat"><span>Bénéfice</span><b id="benef">0 FCFA</b></div>
 <button class="btn" onclick="window.print()">📄 Export PDF</button>
 </div>
 </div>
@@ -113,68 +190,59 @@ th,td{padding:8px;border-bottom:1px solid #444;text-align:center}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-const firebaseConfig = {
-  apiKey: "👉COLLE_TA_API_KEY",
-  authDomain: "👉TON_PROJET.firebaseapp.com",
-  databaseURL: "👉https://TON_PROJET-default-rtdb.firebaseio.com",
-  projectId: "👉TON_PROJET",
-  storageBucket: "👉TON_PROJET.appspot.com",
-  messagingSenderId: "👉XXXX",
-  appId: "👉XXXX"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+firebase.initializeApp({
+ apiKey:"AIzaSyDOCFzih0gVHQsKtfFyCRgyW4OOrQRJeGo",
+ authDomain:"cave-au-qg.firebaseapp.com",
+ databaseURL:"https://cave-au-qg-default-rtdb.firebaseio.com",
+ projectId:"cave-au-qg",
+ storageBucket:"cave-au-qg.appspot.com",
+ messagingSenderId:"374133210544",
+ appId:"1:374133210544:web:125b5297d68e32a5b62a75"
+});
+const db=firebase.database();
 </script>
 
 <script>
 const PIN_ADMIN='9999';
 const PIN_VENDEUR='1234';
 let roleActuel=null;
+let boissons=[],ventes=[];
 
-let boissons=[];
-let ventes=[];
+db.ref("boissons").on("value",s=>{boissons=s.val()||[];refresh();});
+db.ref("ventes").on("value",s=>{ventes=s.val()||[];refresh();});
 
-db.ref("boissons").on("value", s=>{
-  boissons=s.val()||[];
-  refresh();
-});
-
-db.ref("ventes").on("value", s=>{
-  ventes=s.val()||[];
-  refresh();
-});
-
-function save(){
-  db.ref("boissons").set(boissons);
-  db.ref("ventes").set(ventes);
-}
+function save(){db.ref().update({boissons,ventes});}
 
 function loginCheck(){
- const r=role.value,p=pin.value;
- if((r==='admin'&&p===PIN_ADMIN)||(r==='vendeur'&&p===PIN_VENDEUR)){
-  roleActuel=r;
+ if((role.value==='admin'&&pin.value===PIN_ADMIN)||(role.value==='vendeur'&&pin.value===PIN_VENDEUR)){
+  roleActuel=role.value;
   login.classList.add('hidden');
   mainHeader.classList.remove('hidden');
+  logoutBtn.classList.remove('hidden');
   show('home');
-  document.querySelector("button[onclick=\"show('stock')\"]").style.display=(r==='vendeur')?'none':'block';
+  document.querySelector("button[onclick=\"show('stock')\"]").style.display =
+   (roleActuel==='vendeur')?'none':'block';
  } else alert('PIN incorrect');
 }
 
+function logout(){
+ roleActuel=null;
+ pin.value='';
+ document.querySelectorAll('.container').forEach(c=>c.classList.add('hidden'));
+ mainHeader.classList.add('hidden');
+ logoutBtn.classList.add('hidden');
+ login.classList.remove('hidden');
+}
+
 function show(id){
+ if(!roleActuel){logout();return;}
  document.querySelectorAll('.container').forEach(c=>c.classList.add('hidden'));
  document.getElementById(id).classList.remove('hidden');
  refresh();
 }
 
 function addBoisson(){
- boissons.push({
-  nom:s_nom.value,
-  cat:s_cat.value,
-  achat:+s_achat.value,
-  vente:+s_vente.value,
-  stock:+s_qte.value
- });
+ boissons.push({nom:s_nom.value,cat:s_cat.value,achat:+s_achat.value,vente:+s_vente.value,stock:+s_qte.value});
  save();
 }
 
@@ -193,51 +261,34 @@ function sell(){
 }
 
 function refresh(){
- stockList.innerHTML='';
- v_boisson.innerHTML='';
- venteList.innerHTML='';
- let st=0,j=0,m=0,b=0;
- const d=new Date();
-
+ stockList.innerHTML='';v_boisson.innerHTML='';venteList.innerHTML='';
+ let st=0,j=0,m=0,b=0,d=new Date();
  boissons.forEach((x,i)=>{
   st+=x.stock;
-  stockList.innerHTML+=`
-  <tr>
-   <td>${x.nom}</td>
-   <td>${x.stock}</td>
-   <td class="${x.stock<=5?'alert':''}">${x.stock<=5?'Faible':''}</td>
-   <td onclick="if(roleActuel==='admin'){boissons.splice(${i},1);save()}">❌</td>
-  </tr>`;
+  stockList.innerHTML+=`<tr><td>${x.nom}</td><td>${x.stock}</td>
+  <td class="${x.stock<=5?'alert':''}">${x.stock<=5?'Faible':''}</td>
+  <td onclick="if(roleActuel==='admin'){boissons.splice(${i},1);save()}">❌</td></tr>`;
   v_boisson.innerHTML+=`<option value="${i}">${x.nom}</option>`;
  });
-
  ventes.forEach((v,i)=>{
-  venteList.innerHTML+=`
-  <tr>
-   <td>${v.nom}</td>
-   <td>${v.qte}</td>
-   <td>${v.total}</td>
-   <td>${new Date(v.date).toLocaleString()}</td>
-   <td onclick="if(roleActuel==='admin'){ventes.splice(${i},1);save()}">❌</td>
-  </tr>`;
+  venteList.innerHTML+=`<tr><td>${v.nom}</td><td>${v.qte}</td><td>${v.total}</td>
+  <td>${new Date(v.date).toLocaleString()}</td>
+  <td onclick="if(roleActuel==='admin'){ventes.splice(${i},1);save()}">❌</td></tr>`;
   const vd=new Date(v.date);
-  if(vd.toDateString()==d.toDateString()) j+=v.total;
-  if(vd.getMonth()==d.getMonth()) m+=v.total;
+  if(vd.toDateString()==d.toDateString())j+=v.total;
+  if(vd.getMonth()==d.getMonth())m+=v.total;
   b+=v.benef;
  });
-
  stockTotal.innerText=st;
- recetteJour.innerText=j;
- rJour.innerText=j;
- rMois.innerText=m;
- benef.innerText=b;
+ recetteJour.innerText=j+' FCFA';
+ rJour.innerText=j+' FCFA';
+ rMois.innerText=m+' FCFA';
+ benef.innerText=b+' FCFA';
 }
 </script>
 
 <script>
-if ('serviceWorker' in navigator) {
- navigator.serviceWorker.register('sw.js');
-}
+if('serviceWorker'in navigator){navigator.serviceWorker.register('sw.js');}
 </script>
 
 </body>
