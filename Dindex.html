@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Cave Au QG</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#020617">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{--bg:#020617;--card:#0f172a;--primary:#22c55e;--secondary:#3b82f6;--danger:#ef4444;--text:#e5e7eb;--muted:#94a3b8;}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Segoe UI',Roboto,Arial;background:#020617;color:var(--text);}
+header{background:#020617;padding:16px;text-align:center;font-size:22px;font-weight:700;position:sticky;top:0;z-index:10;}
+.container{padding:16px}
+.card{background:var(--card);padding:16px;border-radius:16px;margin-bottom:16px;}
+.btn{width:100%;padding:14px;margin:8px 0;font-size:16px;font-weight:600;border:none;border-radius:14px;background:linear-gradient(135deg,var(--secondary),var(--primary));color:#fff;cursor:pointer;}
+.delBtn{background:var(--danger);border:none;border-radius:8px;padding:4px 8px;color:#fff;cursor:pointer;}
+.logout{width:calc(100% - 32px);margin:12px 16px;padding:12px;background:var(--danger);border:none;border-radius:14px;color:#fff;font-weight:600;}
+input,select{width:100%;padding:12px;margin:6px 0;border-radius:12px;border:none;background:#020617;color:#fff;}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:10px;text-align:center;border-bottom:1px solid #1e293b;}
+.alert{color:#ef4444;font-weight:700}
+.hidden{display:none}
+.stat{display:flex;justify-content:space-between;padding:6px 0}
+.highlight{background:#22c55e33;transition:0.5s;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="container">
+<header>🔒 Cave « Au QG »</header>
+<div class="card">
+<select id="role">
+<option value="vendeur">Vendeur</option>
+<option value="admin">Admin</option>
+</select>
+<input id="pin" type="password" placeholder="Code PIN">
+<button id="btnLogin" class="btn">Connexion</button>
+</div>
+</div>
+
+<header id="mainHeader" class="hidden">🍾 Cave « Au QG »</header>
+<button id="logoutBtn" class="logout hidden">🚪 Déconnexion</button>
+
+<!-- HOME -->
+<div id="home" class="container hidden">
+<button class="btn" onclick="show('stock')">📦 Stock</button>
+<button class="btn" onclick="show('ventes')">💰 Ventes</button>
+<button class="btn" onclick="show('recettes')">📊 Recettes</button>
+<button class="btn" onclick="show('graphiques')">📈 Graphiques</button>
+<div class="card">
+<div class="stat"><span>Stock total</span><b id="stockTotal">0</b></div>
+<div id="stockDetail"></div>
+</div>
+<div id="adminNotifications" class="card hidden">
+<h4>🔔 Notifications</h4>
+<ul id="notifList"></ul>
+</div>
+</div>
+
+<!-- STOCK -->
+<div id="stock" class="container hidden">
+<button class="btn" onclick="show('home')">⬅ Retour</button>
+<div class="card">
+<input id="s_nom" placeholder="Nom boisson" list="suggestions">
+<datalist id="suggestions"></datalist>
+<select id="s_cat">
+<option>Bière</option><option>Vin</option><option>Whisky</option><option>Jus</option><option>Autres</option>
+</select>
+<input id="s_achat" type="number" placeholder="Prix achat">
+<input id="s_vente" type="number" placeholder="Prix vente">
+<input id="s_qte" type="number" placeholder="Quantité">
+<button class="btn" onclick="addBoisson()">Ajouter</button>
+</div>
+<div class="card">
+<h4>📦 Résumé Stock</h4>
+<table>
+<thead><tr><th>Nom</th><th>Initial</th><th>Restant</th><th>Sortie</th><th>Alerte</th><th>❌</th></tr></thead>
+<tbody id="stockList"></tbody>
+</table>
+</div>
+<div class="card">
+<h4>📜 Historique des mouvements</h4>
+<input type="date" id="filterDate">
+<select id="filterBoisson">
+<option value="">-- Toutes les boissons --</option>
+</select>
+<button class="btn" onclick="filterHistorique()">Filtrer</button>
+<table>
+<thead><tr><th>Boisson</th><th>Catégorie</th><th>Type</th><th>Qté</th><th>Date</th></tr></thead>
+<tbody id="historiqueList"></tbody>
+</table>
+</div>
+</div>
+
+<!-- VENTES -->
+<div id="ventes" class="container hidden">
+<button class="btn" onclick="show('home')">⬅ Retour</button>
+<div class="card">
+<select id="v_boisson"></select>
+<input id="v_qte" type="number" placeholder="Quantité">
+<button class="btn" onclick="sell()">Valider vente</button>
+</div>
+<div id="venteSummary" class="card"></div>
+<div class="card">
+<table>
+<thead><tr><th>Boisson</th><th>Qté</th><th>Total</th><th>❌</th></tr></thead>
+<tbody id="venteList"></tbody>
+</table>
+</div>
+</div>
+
+<!-- RECETTES -->
+<div id="recettes" class="container hidden">
+<button class="btn" onclick="show('home')">⬅ Retour</button>
+<div class="card">
+<div class="stat"><span>Jour</span><b id="rJour">0 FCFA</b></div>
+<div class="stat"><span>Mois</span><b id="rMois">0 FCFA</b></div>
+<div class="stat"><span>Total</span><b id="rTotal">0 FCFA</b></div>
+<div id="recetteDetail"></div>
+</div>
+<div id="adminRecettes" class="card hidden">
+<h4>💵 Recettes détaillées (Admin)</h4>
+<div class="stat"><span>Jour</span><b id="adminRjour">0 FCFA</b></div>
+<div class="stat"><span>Mois</span><b id="adminRmois">0 FCFA</b></div>
+<div class="stat"><span>Total</span><b id="adminRtotal">0 FCFA</b></div>
+<div class="stat"><span>Bénéfice</span><b id="adminRbenefice">0 FCFA</b></div>
+</div>
+</div>
+
+<!-- GRAPHIQUES -->
+<div id="graphiques" class="container hidden">
+<button class="btn" onclick="show('home')">⬅ Retour</button>
+<div class="card">
+<h3>📦 Stock par boisson</h3>
+<canvas id="stockChart"></canvas>
+</div>
+<div class="card">
+<h3>💰 Ventes par boisson</h3>
+<canvas id="venteChart"></canvas>
+</div>
+</div>
+
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+firebase.initializeApp({
+ apiKey:"AIzaSyDOCFzih0gVHQsKtfFyCRgyW4OOrQRJeGo",
+ authDomain:"cave-au-qg.firebaseapp.com",
+ databaseURL:"https://cave-au-qg-default-rtdb.firebaseio.com",
+ projectId:"cave-au-qg",
+ storageBucket:"cave-au-qg.appspot.com",
+ messagingSenderId:"374133210544",
+ appId:"1:374133210544:web:125b5297d68e32a5b62a75"
+});
+const db=firebase.database();
+const PIN_ADMIN='9999', PIN_VENDEUR='1234';
+const INITIAL_VENDEUSE = "G";
+let roleActuel=null, boissons=[], ventes=[];
+let stockChart=null, venteChart=null, venteJourChart=null, venteMoisChart=null;
+const boissonsSuggestions = ["Bock","Beaufort","Castel","Flag","Tuborg","Guinness","Budweiser","Doppel Munich","Booster Tequila","Asso","Youki Orange","Youki Ananas","Youzou Citron","Ivoire","Ivoire Spéciale","Ivoire Black","Heineken","Mützig","Class","Rhino Energy Malt","Desperados"];
+
+if("Notification"in window){Notification.requestPermission();}
+
+// --- Realtime Firebase ---
+db.ref("boissons").on("value",s=>{boissons=s.val()||[];refresh(); refreshHistorique();});
+db.ref("ventes").on("value",s=>{ventes=s.val()||[];refresh();});
+
+// Notifications Admin
+db.ref('notifications').on('value', snapshot=>{
+  if(roleActuel==='admin'){
+    const notifs = snapshot.val() || {};
+    const notifList = document.getElementById('notifList');
+    notifList.innerHTML = '';
+    Object.values(notifs).forEach(n=>{
+      const li=document.createElement('li');
+      li.innerText = `[${new Date(n.date).toLocaleString()}] ${n.message}`;
+      notifList.appendChild(li);
+    });
+    document.getElementById('adminNotifications').classList.remove('hidden');
+  }
+});
+
+// --- Login / Logout ---
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('btnLogin').addEventListener('click', loginCheck);
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+});
+
+function loginCheck(){
+    const roleInput = document.getElementById('role');
+    const pinInput = document.getElementById('pin');
+    if((roleInput.value==='admin' && pinInput.value===PIN_ADMIN) ||
+       (roleInput.value==='vendeur' && pinInput.value===PIN_VENDEUR)){
+        roleActuel = roleInput.value;
+        document.getElementById('login').classList.add('hidden');
+        document.getElementById('mainHeader').classList.remove('hidden');
+        document.getElementById('logoutBtn').classList.remove('hidden');
+        show('home');
+    } else { alert('PIN incorrect'); }
+}
+
+function logout(){
+ roleActuel=null;
+ document.getElementById('pin').value='';
+ document.querySelectorAll('.container').forEach(c=>c.classList.add('hidden'));
+ document.getElementById('mainHeader').classList.add('hidden');
+ document.getElementById('logoutBtn').classList.add('hidden');
+ document.getElementById('login').classList.remove('hidden');
+}
+
+function show(id){
+ if(!roleActuel)return logout();
+ document.querySelectorAll('.container').forEach(c=>c.classList.add('hidden'));
+ document.getElementById(id).classList.remove('hidden');
+ refresh();
+}
+
+// --- Ajouter boisson ---
+function addBoisson(){
+  const nomBoisson = document.getElementById('s_nom').value.trim();
+  const catBoisson = document.getElementById('s_cat').value;
+  const prixAchat = +document.getElementById('s_achat').value;
+  const prixVente = +document.getElementById('s_vente').value;
+  const qte = +document.getElementById('s_qte').value;
+  if(!nomBoisson || !prixAchat || !prixVente || !qte) return alert('Donnée invalide');
+
+  const addedBy = roleActuel==='vendeur' ? INITIAL_VENDEUSE : "";
+  let existing = boissons.find(b => b.nom.toLowerCase()===nomBoisson.toLowerCase());
+  if(existing){
+      existing.stock += qte;
+      existing.stockInitial += qte;
+      existing.historique.push({type:'ajout', qte:qte, date:new Date().toISOString()});
+  } else {
+      boissons.push({nom: nomBoisson, cat: catBoisson, achat: prixAchat, vente: prixVente, stock: qte, stockInitial: qte, addedBy: addedBy, historique:[{type:'ajout', qte:qte, date:new Date().toISOString()}]});
+  }
+  db.ref().update({boissons,ventes});
+  document.getElementById('s_nom').value='';
+  document.getElementById('s_cat').selectedIndex=0;
+  document.getElementById('s_achat').value='';
+  document.getElementById('s_vente').value='';
+  document.getElementById('s_qte').value='';
+  refresh();
+}
+
+// --- Vente ---
+function sell(){
+ const i=document.getElementById('v_boisson').selectedIndex;
+ const q=+document.getElementById('v_qte').value;
+ if(i<0 || q<=0) return alert('Sélection ou quantité invalide');
+ if(boissons[i].stock<q) return alert('Stock insuffisant');
+ boissons[i].stock -= q;
+ ventes.push({nom:boissons[i].nom,cat:boissons[i].cat,qte:q,total:q*boissons[i].vente,date:new Date().toISOString()});
+ boissons[i].historique.push({type:'vente', qte:q, date:new Date().toISOString()});
+ db.ref().update({boissons,ventes});
+ document.getElementById('v_qte').value='';
+ if(Notification.permission==="granted"){new Notification("💰 Nouvelle vente",{body:`${q} ${boissons[i].nom}`});}
+ refresh();
+}
+
+// --- Refresh affichages et graphiques ---
+function refresh(){
+ stockList.innerHTML='';
+ document.getElementById('v_boisson').innerHTML='';
+ venteList.innerHTML='';
+ let totalStock=0;
+
+ const datalist = document.getElementById('suggestions');
+ datalist.innerHTML = '';
+ boissonsSuggestions.forEach(b => { const option = document.createElement('option'); option.value = b; datalist.appendChild(option); });
+
+ boissons.forEach((b,i)=>{
+  totalStock += b.stock;
+  const stockSortie = b.stockInitial - b.stock;
+  stockList.innerHTML+=`<tr>
+    <td>${b.nom}</td><td>${b.stockInitial}</td><td>${b.stock}</td><td>${stockSortie}</td>
+    <td class="${b.stock<=5?'alert':''}">${b.stock<=5?'Faible':''}</td>
+    <td>${roleActuel==='admin'?`<button class="delBtn" onclick="deleteStock(${i})">❌</button>`:''}</td>
+  </tr>`;
+  let option=document.createElement('option'); option.text=b.nom; option.value=i; document.getElementById('v_boisson').add(option);
+ });
+ stockTotal.innerText=totalStock;
+
+ // Ventes
+ let summaryJour={}, summaryMois={}, totalJour=0, totalMois=0;
+ ventes.forEach((v,i)=>{
+  venteList.innerHTML+=`<tr><td>${v.nom}</td><td>${v.qte}</td><td>${v.total}</td><td>${roleActuel==='admin'?`<button class="delBtn" onclick="deleteVente(${i})">❌</button>`:''}</td></tr>`;
+  const vd = new Date(v.date);
+  if(roleActuel==='admin'){
+    if(vd.toDateString()===new Date().toDateString()){ summaryJour[v.nom]=(summaryJour[v.nom]||0)+v.total; totalJour+=v.total;}
+    if(vd.getMonth()===new Date().getMonth() && vd.getFullYear()===new Date().getFullYear()){ summaryMois[v.nom]=(summaryMois[v.nom]||0)+v.total; totalMois+=v.total;}
+  }
+ });
+
+ // Résumé ventes admin
+ if(roleActuel==='admin'){
+  let html='<h4>Résumé des ventes :</h4>';
+  html+='<strong>Aujourd\'hui :</strong><br>';
+  for(let nom in summaryJour){ html+=`<div class="stat"><span>${nom}</span><b>${summaryJour[nom]} FCFA</b></div>`;}
+  html+=`<div class="stat"><span>Total Jour</span><b>${totalJour} FCFA</b></div><hr>`;
+  html+='<strong>Ce mois :</strong><br>';
+  for(let nom in summaryMois){ html+=`<div class="stat"><span>${nom}</span><b>${summaryMois[nom]} FCFA</b></div>`;}
+  html+=`<div class="stat"><span>Total Mois</span><b>${totalMois} FCFA</b></div>`;
+  document.getElementById('venteSummary').innerHTML=html;
+ } else { document.getElementById('venteSummary').innerHTML=''; }
+
+ // Recettes admin
+ refreshRecettesAdmin();
+
+ // Graphiques si visible
+ if(!document.getElementById('graphiques').classList.contains('hidden')) renderCharts();
+}
+
+// --- Graphiques ---
+function renderCharts(){
+ const stockLabels = boissons.map(b=>b.nom);
+ const stockData = boissons.map(b=>b.stock);
+ const stockColors = stockLabels.map((b,i)=>`hsl(${i*50%360},70%,50%)`);
+ if(stockChart) stockChart.destroy();
+ stockChart = new Chart(document.getElementById('stockChart'),{
+   type:'bar',
+   data:{labels:stockLabels,datasets:[{label:'Stock',data:stockData,backgroundColor:stockColors}]},
+   options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
+ });
+
+ let venteAgg={}; ventes.forEach(v=>{venteAgg[v.nom]=(venteAgg[v.nom]||0)+v.total;});
+ const venteLabels=Object.keys(venteAgg), venteData=Object.values(venteAgg);
+ const venteColors=venteLabels.map((b,i)=>`hsl(${i*50%360},70%,50%)`);
+ if(venteChart) venteChart.destroy();
+ venteChart=new Chart(document.getElementById('venteChart'),{
+   type:'bar',
+   data:{labels:venteLabels,datasets:[{label:'Ventes (FCFA)',data:venteData,backgroundColor:venteColors}]},
+   options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
+ });
+}
+
+// --- Historique et filtres ---
+function refreshHistorique(){
+    const filterBoisson = document.getElementById('filterBoisson');
+    filterBoisson.innerHTML = '<option value="">-- Toutes les boissons --</option>';
+    boissons.forEach(b=>{
+        const option = document.createElement('option');
+        option.value = b.nom; option.text = b.nom; filterBoisson.add(option);
+    });
+    filterHistorique();
+}
+
+function filterHistorique(){
+    const date = document.getElementById('filterDate').value;
+    const boisson = document.getElementById('filterBoisson').value;
+    const tbody = document.getElementById('historiqueList');
+    tbody.innerHTML='';
+
+    boissons.forEach(b=>{
+        if(boisson && b.nom !== boisson) return;
+        if(!b.historique) return;
+        b.historique.forEach(h=>{
+            if(date && h.date.split('T')[0] !== date) return;
+            tbody.innerHTML+=`<tr>
+                <td>${b.nom}</td><td>${b.cat}</td><td>${h.type}</td><td>${h.qte}</td><td>${new Date(h.date).toLocaleString()}</td>
+            </tr>`;
+        });
+    });
+}
+
+// --- Supprimer ---
+function deleteStock(index){ if(confirm("Supprimer ce stock ?")){ boissons.splice(index,1); db.ref().update({boissons,ventes}); refresh(); refreshHistorique(); } }
+function deleteVente(index){ if(confirm("Supprimer cette vente ?")){ ventes.splice(index,1); db.ref().update({boissons,ventes}); refresh(); } }
+
+// --- Recettes détaillées Admin ---
+function refreshRecettesAdmin(){
+  if(roleActuel !== 'admin') return;
+  if(document.getElementById('recettes').classList.contains('hidden')) return;
+
+  let totalJour=0, totalMois=0, total=0, benefice=0;
+  const now=new Date();
+
+  ventes.forEach(v=>{
+    const vd=new Date(v.date);
+    total += v.total;
+    const b = boissons.find(b => b.nom===v.nom);
+    const profit = b ? (v.total - b.achat*v.qte) : 0;
+    benefice += profit;
+
+    if(vd.toDateString()===now.toDateString()) totalJour += v.total;
+    if(vd.getMonth()===now.getMonth() && vd.getFullYear()===now.getFullYear()) totalMois += v.total;
+  });
+
+  document.getElementById('adminRjour').innerText = totalJour+" FCFA";
+  document.getElementById('adminRmois').innerText = totalMois+" FCFA";
+  document.getElementById('adminRtotal').innerText = total+" FCFA";
+  document.getElementById('adminRbenefice').innerText = benefice+" FCFA";
+
+  document.getElementById('adminRecettes').classList.remove('hidden');
+}
+</script>
+</body>
+</html>
